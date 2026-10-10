@@ -1,5 +1,16 @@
 import express from 'express'
-import { ChangeJobApplicationsStatus, changeVisiblity, getCompanyData, getCompanyJobApplicants, getCompanyPostedJobs, loginCompany, postJob, registerCompany } from '../controllers/companyController.js'
+import { 
+    ChangeJobApplicationsStatus, 
+    changeVisiblity, 
+    getCompanyData, 
+    getCompanyJobApplicants, 
+    getCompanyPostedJobs, 
+    loginCompany, 
+    postJob, 
+    registerCompany,
+    reanalyzeApplication,
+    generateInterviewQuestionsForApplicant
+} from '../controllers/companyController.js'
 import upload from '../config/multer.js'
 import { protectCompany } from '../middleware/authMiddleware.js'
 
@@ -20,13 +31,19 @@ router.post('/post-job', protectCompany, postJob)
 // Get Applicants Data of Company
 router.get('/applicants', protectCompany, getCompanyJobApplicants)
 
-// Get  Company Job List
+// Get Company Job List
 router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
 
-// Change Applcations Status 
+// Change Applications Status 
 router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
 
-// Change Applcations Visiblity 
+// Change Applications Visibility 
 router.post('/change-visiblity', protectCompany, changeVisiblity)
+
+// AI Re-analysis endpoint
+router.post('/analyze-application/:id', protectCompany, reanalyzeApplication)
+
+// AI Interview Questions Generator endpoint
+router.post('/interview-questions/:id', protectCompany, generateInterviewQuestionsForApplicant)
 
 export default router

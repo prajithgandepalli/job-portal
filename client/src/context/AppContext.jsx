@@ -74,12 +74,12 @@ export const AppContextProvider = (props) => {
 
             if (data.success) {
                 setUserData(data.user)
-            } else (
-                toast.error(data.message)
-            )
+            } else {
+                console.warn('User fetch message:', data.message)
+            }
 
         } catch (error) {
-            toast.error(error.message)
+            console.warn('Fetch user data error:', error.message)
         }
     }
 
@@ -142,7 +142,7 @@ export const AppContextProvider = (props) => {
         userApplications, setUserApplications,
         fetchUserData,
         fetchUserApplications,
-
+        fetchJobs,
     }
 
     return (<AppContext.Provider value={value}>

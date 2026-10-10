@@ -1,9 +1,12 @@
 import Company from "../models/Company.js";
 import bcrypt from 'bcrypt'
-import { v2 as cloudinary } from 'cloudinary'
 import generateToken from "../utils/generateToken.js";
 import Job from "../models/Job.js";
 import JobApplication from "../models/JobApplication.js";
+import User from "../models/User.js";
+import { resolveResumeText, stripHtml } from "../utils/resumeExtractor.js";
+import { analyzeResumeAgainstJob, generateInterviewQuestions } from "../services/aiService.js";
+import { v2 as cloudinary } from 'cloudinary';
 
 // Register a new company
 export const registerCompany = async (req, res) => {
@@ -48,6 +51,9 @@ export const registerCompany = async (req, res) => {
         })
 
     } catch (error) {
+        if (error.code === 11000 || error.message.includes('E11000')) {
+            return res.json({ success: false, message: 'A company with this email address is already registered. Please log in.' })
+        }
         res.json({ success: false, message: error.message })
     }
 }
@@ -141,10 +147,10 @@ export const getCompanyJobApplicants = async (req, res) => {
 
         const companyId = req.company._id
 
-        // Find job applications for the user and populate related data
+        // Find job applications for the recruiter company and populate related data
         const applications = await JobApplication.find({ companyId })
-            .populate('userId', 'name image resume')
-            .populate('jobId', 'title location category level salary')
+            .populate('userId', 'name image resume email')
+            .populate('jobId', 'title location category level salary description')
             .exec()
 
         return res.json({ success: true, applications })
@@ -216,3 +222,91 @@ export const changeVisiblity = async (req, res) => {
         res.json({ success: false, message: error.message })
     }
 }
+
+// Manually trigger or retry AI Resume-Job Analysis for an Application
+export const reanalyzeApplication = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const companyId = req.company._id;
+
+        const application = await JobApplication.findById(id)
+            .populate('userId')
+            .populate('jobId');
+
+        if (!application) {
+            return res.json({ success: false, message: 'Application not found' });
+        }
+
+        // Authorization check: recruiter can only analyze applications for their company
+        if (application.companyId.toString() !== companyId.toString()) {
+            return res.status(403).json({ success: false, message: 'Unauthorized access' });
+        }
+
+        if (!application.userId || !application.userId.resume) {
+            return res.json({ success: false, message: 'Candidate has not uploaded a resume yet' });
+        }
+
+        const resumeText = await resolveResumeText(application.userId);
+        const plainJobDescription = stripHtml(application.jobId.description);
+
+        const aiAnalysis = await analyzeResumeAgainstJob(
+            resumeText,
+            plainJobDescription,
+            application.jobId.title,
+            application.jobId.level,
+            application.jobId.category
+        );
+
+        application.aiAnalysis = aiAnalysis;
+        await application.save();
+
+        if (aiAnalysis.status === 'failed') {
+            return res.json({ success: false, message: aiAnalysis.summary || 'AI analysis failed', aiAnalysis });
+        }
+
+        res.json({ success: true, message: 'AI Analysis completed successfully', aiAnalysis });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Generate AI Interview Questions for Shortlisted Candidate (Optional AI Feature)
+export const generateInterviewQuestionsForApplicant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const companyId = req.company._id;
+
+        const application = await JobApplication.findById(id)
+            .populate('userId')
+            .populate('jobId');
+
+        if (!application) {
+            return res.json({ success: false, message: 'Application not found' });
+        }
+
+        if (application.companyId.toString() !== companyId.toString()) {
+            return res.status(403).json({ success: false, message: 'Unauthorized access' });
+        }
+
+        if (!application.userId || !application.userId.resume) {
+            return res.json({ success: false, message: 'Candidate resume not available' });
+        }
+
+        const resumeText = await resolveResumeText(application.userId);
+        const plainJobDescription = stripHtml(application.jobId.description);
+
+        const questions = await generateInterviewQuestions(
+            resumeText,
+            plainJobDescription,
+            application.jobId.title
+        );
+
+        application.aiAnalysis = application.aiAnalysis || {};
+        application.aiAnalysis.interviewQuestions = questions;
+        await application.save();
+
+        res.json({ success: true, questions });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};

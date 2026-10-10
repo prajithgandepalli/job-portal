@@ -1,5 +1,5 @@
 import express from 'express'
-import { applyForJob, getUserData, getUserJobApplications, updateUserResume } from '../controllers/userController.js'
+import { applyForJob, getResumeFile, getUserData, getUserJobApplications, updateUserResume } from '../controllers/userController.js'
 import upload from '../config/multer.js'
 
 
@@ -16,5 +16,8 @@ router.get('/applications', getUserJobApplications)
 
 // Update user profile (resume)
 router.post('/update-resume', upload.single('resume'), updateUserResume)
+
+// Stream/view resume PDF directly in browser
+router.get('/resume/:userId', getResumeFile)
 
 export default router;

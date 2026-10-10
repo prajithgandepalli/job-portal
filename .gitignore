@@ -7,3 +7,10 @@ node_modules
 
 dist
 build
+
+# Uploaded resumes - do not push to GitHub
+server/uploads/
+
+# Temporary debugging scripts
+server/test-*.js
+server/list-models.js

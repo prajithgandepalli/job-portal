@@ -16,7 +16,7 @@ const AddJob = () => {
     const editorRef = useRef(null)
     const quillRef = useRef(null)
 
-    const { backendUrl, companyToken } = useContext(AppContext)
+    const { backendUrl, companyToken, fetchJobs } = useContext(AppContext)
 
     const onSubmitHandler = async (e) => {
         e.preventDefault()
@@ -31,10 +31,11 @@ const AddJob = () => {
             )
 
             if (data.success) {
-                toast.success(data.message)
+                toast.success('Job Posted Successfully!')
                 setTitle('')
                 setSalary(0)
                 quillRef.current.root.innerHTML = ""
+                if (fetchJobs) fetchJobs()
             } else {
                 toast.error(data.message)
             }
@@ -48,7 +49,7 @@ const AddJob = () => {
 
 
     useEffect(() => {
-        // Initiate Qill only once
+        // Initiate Quill only once
         if (!quillRef.current && editorRef.current) {
             quillRef.current = new Quill(editorRef.current, {
                 theme: 'snow',
@@ -80,8 +81,8 @@ const AddJob = () => {
                 <div>
                     <p className='mb-2'>Job Category</p>
                     <select className='w-full px-3 py-2 border-2 border-gray-300 rounded' onChange={e => setCategory(e.target.value)}>
-                        {JobCategories.map((category, index) => (
-                            <option key={index} value={category}>{category}</option>
+                        {JobCategories.map((cat, index) => (
+                            <option key={index} value={cat}>{cat}</option>
                         ))}
                     </select>
                 </div>
@@ -89,8 +90,8 @@ const AddJob = () => {
                 <div>
                     <p className='mb-2'>Job Location</p>
                     <select className='w-full px-3 py-2 border-2 border-gray-300 rounded' onChange={e => setLocation(e.target.value)}>
-                        {JobLocations.map((location, index) => (
-                            <option key={index} value={location}>{location}</option>
+                        {JobLocations.map((loc, index) => (
+                            <option key={index} value={loc}>{loc}</option>
                         ))}
                     </select>
                 </div>
@@ -110,7 +111,7 @@ const AddJob = () => {
                 <input min={0} className='w-full px-3 py-2 border-2 border-gray-300 rounded sm:w-[120px]' onChange={e => setSalary(e.target.value)} type="Number" placeholder='2500' />
             </div>
 
-            <button className='w-28 py-3 mt-4 bg-black text-white rounded'>ADD</button>
+            <button className='w-28 py-3 mt-4 bg-black text-white rounded hover:bg-gray-800 transition-colors'>ADD</button>
         </form>
     )
 }
